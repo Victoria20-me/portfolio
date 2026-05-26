@@ -46,7 +46,9 @@ const [focusScore, setFocusScore] = useState(100);
           completedTasks={completedTasks}/>
           </div>
           {/* <StatsCard completedTasks={completedTasks}/> */}
-          <AISideBar/>
+          <div className="md:row-span-2">
+            <AISideBar/>
+          </div>
         </div>
       </div>
     </div>

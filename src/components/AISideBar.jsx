@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
@@ -9,6 +9,12 @@ export default function AISideBar() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const messagesEndRef = useRef(null);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  }, [messages]);
   const handleAskAI = async () => {
     if (!prompt.trim()) return;
 
@@ -20,6 +26,7 @@ export default function AISideBar() {
         content: prompt,
       };
       setMessages((prev) => [...prev, userMessage]);
+      setPrompt("");
       const response = await axios.post(
         "https://openrouter.ai/api/v1/chat/completions",
         {
@@ -45,6 +52,7 @@ export default function AISideBar() {
           },
         },
       );
+
       const aiReply = response.data.choices[0].message.content;
       setMessages((prev) => [
         ...prev,
@@ -53,11 +61,15 @@ export default function AISideBar() {
           content: aiReply,
         },
       ]);
-      setPrompt("");
     } catch (error) {
       console.log(error);
     } finally {
       setLoading(false);
+    }
+  };
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleAskAI();
     }
   };
   return (
@@ -65,43 +77,73 @@ export default function AISideBar() {
       initial={{ opacity: 0, x: 40 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.6 }}
-      className="h-125 min-h-165 overflow-y-auto bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl p-6 shadow-[0_8px_32px_rgba(0, 0, 0, 0.37)] flex flex-col"
+      className="h-[87.8vh] overflow-hidden bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl p-6 shadow-[0_8px_32px_rgba(0, 0, 0, 0.37)] flex flex-col"
     >
-      <div>
-        <h2 className="text-2xl font-bold mb-6">AI Assistant</h2>
+      <div className="p-5 border-b border-white/10 shrink-0">
+        <h2 className="text-2xl text-white font-semibold">AI Focus Coach</h2>
+        <p className="text-sm text-gray-300 mt-1">
+          Ask for study plans, productivity help, summaries, and focus advice
+        </p>
       </div>
-      <div className="space-y-4 wrap-break-word overflow-x-hidden">
+      <div className=" flex-1 min-h-0 space-y-4 p-4 overflow-x-hidden overflow-y-auto">
+        {messages.length === 0 && (
+          <div className="text-gray-400 text-sm">
+            Start a conversation with your AI coach.
+          </div>
+        )}
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`p-3 rounded-xl ${
-              message.role === "user"
-                ? "bg-blue-500/20 text-right"
-                : "bg-white/10"
+            className={`flex ${
+              message.role === "user" ? "justify-end" : "justify-start"
             }
             `}
           >
-            <ReactMarkdown rehypePlugins={[rehypeRaw]}>
-              {message.content}
-            </ReactMarkdown>
+            <div
+              className={`max-w-[80%] p-4 rounded-2xl wrap-break-word shadow-lg ${
+                message.role === "user"
+                  ? "bg-blue-500 text-white rounded-br-sm"
+                  : "bg-white/10 backdrop-blur-xl border border-white/10 text-gray-100 rounded-bl-sm"
+              }`}
+            >
+              <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                {message.content}
+              </ReactMarkdown>
+            </div>
           </div>
         ))}
-        {loading && <p className="text-gray-400">AI is thinking...</p>}
+
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-white/10 border border-white/10 px-4 py-3 rounded-2xl text-gray-300">
+             <div className="flex gap-1">
+              <span className="w-2 h-2 bg-white rounded-full animate-bounce [animation-delay:0.2s]"></span>
+              <span className="w-2 h-2 bg-white rounded-full animate-bounce [animation-delay:0.4s]"></span>
+             </div>
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef}></div>
       </div>
-      <div className="flex gap-3">
-        <input
-          type="text"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Ask AI anything..."
-          className="flex-1 p-3 rounded-xl bg-gray-800 border border-gray-700 outline-none"
-        />
-        <button
-          onClick={handleAskAI}
-          className="bg-blue-500 px-4 rounded-xl hover:scale-105 transition-all duration-300"
-        >
-          Send
-        </button>
+
+      <div className="p-4 border-t border-white/10 flex shrink-0">
+        <div className="flex items-center w-full gap-3">
+          <input
+            type="text"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Ask AI anything..."
+            onKeyDown={handleKeyDown}
+            className="flex-1 px-3 py-2 rounded-xl min-w-0 bg-white/10 border border-white/10  text-white placeholder-gray-400 outline-none"
+          />
+          <button
+            onClick={handleAskAI}
+            className="bg-blue-500 hover:bg-blue-600 shrink-0 whitespace-nowrap px-4 py-2 rounded-xl hover:scale-105 transition duration-300"
+          >
+            Send
+          </button>
+        </div>
       </div>
     </motion.div>
   );
